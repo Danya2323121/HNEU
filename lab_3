@@ -1,0 +1,125 @@
+import tkinter as tk
+from tkinter import messagebox
+from threading import Lock
+from datetime import datetime
+
+# Базова логіка з попередніх лабораторних
+class Stop:
+    def __init__(self, name): self.name = name
+    def __str__(self): return self.name
+
+class Route:
+    def __init__(self, stops): self.stops = stops
+    def __str__(self): return " -> ".join(str(stop) for stop in self.stops)
+
+class Ticket:
+    def __init__(self, train, car, seat, passenger_name, departure, arrival):
+        self.train = train
+        self.car = car
+        self.seat = seat
+        self.passenger_name = passenger_name
+        self.departure = departure
+        self.arrival = arrival
+        self.timestamp = datetime.now()
+    def __str__(self):
+        return f"{self.passenger_name} - Train {self.train.train_id} - Car {self.car}, Seat {self.seat}, {self.departure}->{self.arrival}"
+
+class Train:
+    def __init__(self, train_id, route, seats_per_car=10, num_cars=2):
+        self.train_id = train_id
+        self.route = route
+        self.seats = {car: {seat: None for seat in range(1, seats_per_car+1)} for car in range(1, num_cars+1)}
+        self.lock = Lock()
+    def book_seat(self, car, seat, passenger_name, departure, arrival):
+        with self.lock:
+            if self.seats.get(car, {}).get(seat) is None:
+                ticket = Ticket(self, car, seat, passenger_name, departure, arrival)
+                self.seats[car][seat] = ticket
+                return ticket
+            return None
+
+class TicketOffice:
+    def __init__(self): self.sales = []
+    def sell_ticket(self, train, car, seat, name, dep, arr):
+        ticket = train.book_seat(car, seat, name, dep, arr)
+        if ticket:
+            self.sales.append(ticket)
+            return ticket
+        return None
+
+# ---------------- GUI ----------------
+class TicketApp:
+    def __init__(self, root, role):
+        self.root = root
+        self.role = role
+        self.root.title(f"Train Ticket System - {role}")
+
+        self.stop1 = Stop("Kyiv")
+        self.stop2 = Stop("Lviv")
+        self.route = Route([self.stop1, self.stop2])
+        self.train = Train("IC125", self.route)
+        self.office = TicketOffice()
+
+        self.build_interface()
+
+    def build_interface(self):
+        tk.Label(self.root, text="Train: IC125").pack()
+
+        if self.role == "Passenger":
+            self.build_passenger_form()
+        elif self.role == "Admin":
+            self.build_admin_panel()
+
+    def build_passenger_form(self):
+        tk.Label(self.root, text="Your name:").pack()
+        self.name_entry = tk.Entry(self.root)
+        self.name_entry.pack()
+
+        tk.Label(self.root, text="Car:").pack()
+        self.car_entry = tk.Entry(self.root)
+        self.car_entry.pack()
+
+        tk.Label(self.root, text="Seat:").pack()
+        self.seat_entry = tk.Entry(self.root)
+        self.seat_entry.pack()
+
+        tk.Button(self.root, text="Buy Ticket", command=self.buy_ticket).pack()
+
+    def build_admin_panel(self):
+        tk.Button(self.root, text="View Sales", command=self.view_sales).pack()
+
+    def buy_ticket(self):
+        name = self.name_entry.get()
+        try:
+            car = int(self.car_entry.get())
+            seat = int(self.seat_entry.get())
+        except ValueError:
+            messagebox.showerror("Error", "Car and seat must be numbers")
+            return
+
+        ticket = self.office.sell_ticket(self.train, car, seat, name, self.stop1, self.stop2)
+        if ticket:
+            messagebox.showinfo("Success", str(ticket))
+        else:
+            messagebox.showerror("Error", "Seat already taken")
+
+    def view_sales(self):
+        sales_text = "\n".join(str(t) for t in self.office.sales) or "No tickets sold"
+        messagebox.showinfo("Sales", sales_text)
+
+# Вибір ролі
+def choose_role():
+    def start(role):
+        choice.destroy()
+        root = tk.Tk()
+        TicketApp(root, role)
+        root.mainloop()
+
+    choice = tk.Tk()
+    choice.title("Choose Role")
+    tk.Button(choice, text="Passenger", width=20, command=lambda: start("Passenger")).pack(padx=20, pady=10)
+    tk.Button(choice, text="Admin", width=20, command=lambda: start("Admin")).pack(padx=20, pady=10)
+    choice.mainloop()
+
+if __name__ == "__main__":
+    choose_role()
