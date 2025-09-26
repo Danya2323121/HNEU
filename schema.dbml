@@ -1,0 +1,36 @@
+Table Klient {
+  id_klienta int [pk, increment]
+  imya varchar(50)
+  email varchar(100)
+  telefon varchar(20)
+  adresa varchar(150)
+  data_reestracii date
+}
+
+Table Kategoria {
+  id_kategorii int [pk, increment]
+  nazva varchar(50)
+}
+
+Table Tovar {
+  id_tovara int [pk, increment]
+  nazva varchar(100)
+  cena decimal(10,2)
+  kilkist_na_skladi int
+  id_kategorii int [ref: > Kategoria.id_kategorii]
+}
+
+Table Zamovlennya {
+  id_zamovlennya int [pk, increment]
+  data_zamovlennya date
+  status varchar(20)
+  id_klienta int [ref: > Klient.id_klienta]
+}
+
+Table Poziciya_zamovlennya {
+  id_pozicii int [pk, increment]
+  id_zamovlennya int [ref: > Zamovlennya.id_zamovlennya]
+  id_tovara int [ref: > Tovar.id_tovara]
+  kilkist int
+  suma decimal(10,2)
+}
